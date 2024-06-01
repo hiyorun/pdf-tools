@@ -10,8 +10,10 @@
 	let sortBy = 'name';
 	let descending = false;
 	let deleteDialog: SvelteComponent;
+	let busy = false;
 
 	function handleFileChange(event: Event) {
+		busy = true
 		const files = (event.target as HTMLInputElement)?.files;
 		if (!files) return;
 		processFiles(files);
@@ -42,6 +44,7 @@
 				}
 			];
 		}
+		busy = false
 	}
 
 	function onSort(e: CustomEvent) {
@@ -75,13 +78,16 @@
 	}
 
 	async function generatePDF() {
-		if (!Images.length) return;
+		if (Images.length === 0) return;
+
+		const saveImage = [...Images];
+		if (saveImage.length === 0) return;
 
 		const doc = new jsPDF({ format: 'a4' });
 		const width = doc.internal.pageSize.getWidth();
 		const height = doc.internal.pageSize.getHeight();
 
-		Images.forEach((image, index) => {
+		saveImage.forEach((image, index) => {
 			const imgWidth = image.el.naturalWidth;
 			const imgHeight = image.el.naturalHeight;
 
@@ -97,7 +103,7 @@
 			console.log(x, y, index);
 
 			doc.addImage(image.el, 'JPEG', x, y, scaledWidth, scaledHeight);
-			if(index < Images.length - 1){
+			if (index < saveImage.length - 1) {
 				doc.addPage();
 			}
 		});
@@ -130,6 +136,11 @@
 		const files = event.dataTransfer.files;
 		processFiles(files);
 		isDragging = false;
+	}
+
+	function onDragNDrop(event: CustomEvent) {
+		if (!event.detail) return;
+		Images = event.detail;
 	}
 
 	function deleteSelected(e: CustomEvent) {
@@ -166,13 +177,13 @@
 <Dialog bind:this={deleteDialog} />
 
 <div
-	class="w-screen h-screen py-12 bg-slate-900 text-slate-300 flex justify-center items-center overflow-hidden"
+	class="w-screen h-screen bg-slate-900 text-slate-300 flex justify-center items-center overflow-hidden"
 	on:dragover={handleDragOver}
 	on:dragleave={handleDragLeave}
 	on:drop={handleDrop}
 	role="none"
 >
-	<div class="flex flex-col gap-2 justify-center items-center w-full max-w-2xl max-h-full">
+	<div class="flex flex-col gap-2 justify-center items-center w-full max-w-2xl max-h-full p-2">
 		<input
 			id="upload-file"
 			class="hidden"
@@ -192,6 +203,7 @@
 				on:asc={() => {
 					reverseSort();
 				}}
+				on:drag={onDragNDrop}
 			/>
 		{:else}
 			<label for="upload-file">
@@ -211,8 +223,8 @@
 		{/if}
 		<div class="absolute bottom-3 right-3 flex flex-col items-center gap-4">
 			{#if Images.length !== 0}
-				<button
-					class="rounded-xl p-6 w-6 h-6 flex justify-center items-center bg-slate-300 text-slate-900 hover:bg-slate-400 cursor-pointer"
+				<button disabled={busy}
+					class="rounded-xl p-6 w-6 h-6 flex justify-center items-center bg-slate-300 text-slate-900 hover:bg-slate-400 cursor-pointer disabled:bg-slate-500"
 					on:click={generatePDF}
 				>
 					<span class=" material-symbols-outlined"> file_save </span>
