@@ -6,6 +6,8 @@
 		name: string;
 	};
 	let Images: Image[] = [];
+	
+	let list: HTMLDivElement;
 
 	function handleFileChange(event: Event) {
 		const files = (event.target as HTMLInputElement)?.files;
@@ -65,6 +67,14 @@
 			img.src = URL.createObjectURL(new Blob([data]));
 		});
 	}
+	
+	function deleteImage(index: number){
+	  if(!Images.length) return;
+	  const preProcess = Images
+	  preProcess.splice(index, 1)
+	  Images = preProcess
+	}
+	
 	$: {
 		Images;
 		console.log(Images);
@@ -81,13 +91,19 @@
 		accept="image/png, image/jpeg"
 		multiple
 	/>
-	<div class="flex gap-2">
+	<div bind:this={list} class="flex flex-col gap-2 items-center w-full p-2">
 		{#if Images.length !== 0}
-			{#each Images as image}
+			{#each Images as image, index}
 				<div
-					class="border border-slate-300 flex justfy-center items-center w-20 h-20 overflow-hidden rounded-lg shadow"
+					class="border border-slate-300 flex grow justify-center items-center max-w-2xl w-full h-28 overflow-hidden rounded-lg shadow"
 				>
-					<img class="max-w-full max-h-full" src={image.el.src} alt={image.name} />
+	        <div class="w-28 h-28 flex justify-center items-center border overflow-hidden">
+					  <img class="max-w-full max-h-full" src={image.el.src} alt={image.name} />
+	        </div>
+					<span class="grow px-4">{image.name}</span>
+					  <button on:click="{()=>{deleteImage(index)}}">
+					    <span class="material-symbols-outlined p-2 rounded-full">cancel</span>
+					  </button>
 				</div>
 			{/each}
 		{/if}
