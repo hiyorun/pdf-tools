@@ -1,32 +1,77 @@
 <script lang="ts">
+	import Dialog from '$lib/components/dialog.svelte';
+	import Imagelist from '$lib/components/imagelist.svelte';
+	import type { Image } from '$lib/types';
 	import { jsPDF } from 'jspdf';
+	import type { SvelteComponent } from 'svelte';
 
-	type Image = {
-		el: HTMLImageElement;
-		name: string;
-	};
 	let Images: Image[] = [];
-	
-	let list: HTMLDivElement;
+	let isDragging = false;
+	let sortBy = 'name';
+	let descending = false;
+	let deleteDialog: SvelteComponent;
 
 	function handleFileChange(event: Event) {
 		const files = (event.target as HTMLInputElement)?.files;
 		if (!files) return;
+		processFiles(files);
+	}
 
+	async function processFiles(files: FileList) {
 		for (let i = 0; i < files.length; i++) {
 			const reader = new FileReader();
 			reader.readAsArrayBuffer(files[i]);
-			reader.onload = async (e) => {
-				const image = await createImageElement(new Uint8Array(e.target?.result as ArrayBuffer));
-				Images = [
-					...Images,
-					{
-						el: image,
-						name: files[i].name
-					}
-				];
-			};
+
+			const e = await new Promise((resolve) => {
+				reader.onload = resolve;
+			});
+
+			if (e.target?.error) {
+				// Handle errors if needed
+				continue;
+			}
+
+			const image = await createImageElement(new Uint8Array(e.target.result as ArrayBuffer));
+			Images = [
+				...Images,
+				{
+					el: image,
+					name: files[i].name,
+					date: files[i].lastModified,
+					selected: false
+				}
+			];
 		}
+	}
+
+	function onSort(e: CustomEvent) {
+		sortBy = e.detail;
+		sortFile(sortBy, descending);
+	}
+
+	function reverseSort() {
+		descending = !descending;
+		sortFile(sortBy, descending);
+	}
+
+	function sortFile(by: string, reverse: boolean) {
+		console.log('sorting by', by);
+		if (Images.length === 0) return;
+		const preProcess = Images;
+		if (by === 'name') {
+			preProcess.sort((a, b) => {
+				if (a.name < b.name) return !reverse ? -1 : 1;
+				if (a.name > b.name) return !reverse ? 1 : -1;
+				return 0;
+			});
+		} else if (by === 'date') {
+			preProcess.sort((a, b) => {
+				if (a.date < b.date) return !reverse ? -1 : 1;
+				if (a.date > b.date) return !reverse ? 1 : -1;
+				return 0;
+			});
+		}
+		Images = preProcess;
 	}
 
 	async function generatePDF() {
@@ -52,11 +97,14 @@
 			console.log(x, y, index);
 
 			doc.addImage(image.el, 'JPEG', x, y, scaledWidth, scaledHeight);
-			index++;
-			doc.addPage();
+			if(index < Images.length - 1){
+				doc.addPage();
+			}
 		});
 
-		doc.save('image.pdf');
+		const filename = new Date().toISOString();
+
+		doc.save(filename);
 	}
 
 	function createImageElement(data: Uint8Array): Promise<HTMLImageElement> {
@@ -67,48 +115,115 @@
 			img.src = URL.createObjectURL(new Blob([data]));
 		});
 	}
-	
-	function deleteImage(index: number){
-	  if(!Images.length) return;
-	  const preProcess = Images
-	  preProcess.splice(index, 1)
-	  Images = preProcess
+
+	function handleDragOver(event: Event) {
+		event.preventDefault();
+		isDragging = true;
 	}
-	
-	$: {
-		Images;
-		console.log(Images);
+
+	function handleDragLeave() {
+		isDragging = false;
+	}
+
+	function handleDrop(event: Event) {
+		event.preventDefault();
+		const files = event.dataTransfer.files;
+		processFiles(files);
+		isDragging = false;
+	}
+
+	function deleteSelected(e: CustomEvent) {
+		if (Images.length === 0) return;
+		console.log('delete one');
+		deleteDialog.setDialog({
+			title: `Delete Selected`,
+			content: `Do you want to delete these ${e.detail} files?`,
+			cancelCallback: () => deleteDialog.closeDialog(),
+			confirmCallback: () => {
+				const preProcess = Images.filter((val) => !val.selected);
+				Images = preProcess;
+				deleteDialog.closeDialog();
+			}
+		});
+		deleteDialog.openDialog();
+	}
+
+	function deleteAll() {
+		if (Images.length === 0) return;
+		deleteDialog.setDialog({
+			title: 'Delete All',
+			content: 'Do you really want to delete all of the images?',
+			cancelCallback: () => deleteDialog.closeDialog(),
+			confirmCallback: () => {
+				Images = [];
+				deleteDialog.closeDialog();
+			}
+		});
+		deleteDialog.openDialog();
 	}
 </script>
 
+<Dialog bind:this={deleteDialog} />
+
 <div
-	class="w-screen h-screen bg-slate-900 text-slate-300 flex flex-col gap-2 justify-center items-center"
+	class="w-screen h-screen py-12 bg-slate-900 text-slate-300 flex justify-center items-center overflow-hidden"
+	on:dragover={handleDragOver}
+	on:dragleave={handleDragLeave}
+	on:drop={handleDrop}
+	role="none"
 >
-	<input
-		class="border border-slate-300 rounded-full file:bg-slate-300 file:text-slate-900 file:border-0 file:rounded-full file:p-2 p-1"
-		type="file"
-		on:change={handleFileChange}
-		accept="image/png, image/jpeg"
-		multiple
-	/>
-	<div bind:this={list} class="flex flex-col gap-2 items-center w-full p-2">
+	<div class="flex flex-col gap-2 justify-center items-center w-full max-w-2xl max-h-full">
+		<input
+			id="upload-file"
+			class="hidden"
+			type="file"
+			on:change={handleFileChange}
+			accept="image/png, image/jpeg"
+			multiple
+		/>
 		{#if Images.length !== 0}
-			{#each Images as image, index}
+			<Imagelist
+				{Images}
+				on:delete={deleteSelected}
+				on:delete:all={() => {
+					deleteAll();
+				}}
+				on:sort={onSort}
+				on:asc={() => {
+					reverseSort();
+				}}
+			/>
+		{:else}
+			<label for="upload-file">
 				<div
-					class="border border-slate-300 flex grow justify-center items-center max-w-2xl w-full h-28 overflow-hidden rounded-lg shadow"
+					class="text-center flex flex-col gap-2 items-center justify-center border rounded-2xl p-10 cursor-pointer"
 				>
-	        <div class="w-28 h-28 flex justify-center items-center border overflow-hidden">
-					  <img class="max-w-full max-h-full" src={image.el.src} alt={image.name} />
-	        </div>
-					<span class="grow px-4">{image.name}</span>
-					  <button on:click="{()=>{deleteImage(index)}}">
-					    <span class="material-symbols-outlined p-2 rounded-full">cancel</span>
-					  </button>
+					<span class="material-symbols-outlined text-7xl"> image </span>
+					Drop your photos here, or browse.
+					<br />
+					<span class="text-sm text-slate-500 text-center">
+						Your photos won't go anywhere, everything is processed locally on your PC.
+						<br />
+						See source on top right corner on GitHub.
+					</span>
 				</div>
-			{/each}
+			</label>
 		{/if}
+		<div class="absolute bottom-3 right-3 flex flex-col items-center gap-4">
+			{#if Images.length !== 0}
+				<button
+					class="rounded-xl p-6 w-6 h-6 flex justify-center items-center bg-slate-300 text-slate-900 hover:bg-slate-400 cursor-pointer"
+					on:click={generatePDF}
+				>
+					<span class=" material-symbols-outlined"> file_save </span>
+				</button>
+			{/if}
+			<label
+				for="upload-file"
+				class="rounded-2xl p-10 w-10 h-10 flex justify-center items-center bg-indigo-500 text-indigo-50 hover:bg-indigo-600 cursor-pointer"
+			>
+				<span class="text-4xl material-symbols-outlined"> add </span>
+			</label>
+		</div>
 	</div>
-	<button class="rounded-full bg-slate-300 text-slate-900 border-0 p-2" on:click={generatePDF}
-		>Generate PDF</button
-	>
 </div>
