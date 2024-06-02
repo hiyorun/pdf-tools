@@ -14,7 +14,7 @@ class genPDF {
 
     constructor(listOfImages: Image[]) {
         this.images = listOfImages
-        this.filename = new Date().toISOString()
+        this.filename = `${new Date().toISOString()}.pdf`
         this.worker.onmessage = (ev: MessageEvent) => {
             const { progress, stat, blob } = ev.data;
             this.progress = progress
