@@ -8,7 +8,9 @@ export function touchActions(node: HTMLButtonElement, threshold = 500) {
             clearTimeout(timer)
             timer = null
             node.dispatchEvent(new CustomEvent('touch:long'))
+            destroy()
         }
+        node.addEventListener('touchend', handleLongTouchEnd)
     }
 
     const handleTouchStart = (e: Event) => {
@@ -40,7 +42,13 @@ export function touchActions(node: HTMLButtonElement, threshold = 500) {
         node.dispatchEvent(new CustomEvent('touch:end'))
     }
 
+    const handleLongTouchEnd = (e: Event) => {
+        console.log("handleLongTouchEnd")
+        create()
+    }
+
     const create = () => {
+        node.removeEventListener('touchend', handleLongTouchEnd)
         node.addEventListener('touchstart', handleTouchStart)
         node.addEventListener('touchmove', handleTouchMove)
         node.addEventListener('touchend', handleTouchEnd)

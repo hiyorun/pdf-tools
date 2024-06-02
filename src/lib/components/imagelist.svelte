@@ -165,6 +165,6 @@
 		{/each}
 	</div>
 </div>
-<div class="w-full text-center text-sm">
+<div class="text-sm pl-2 w-3/4 self-start md:w-full">
 	Tip: You can click/tap and hold items to delete them individually.
 </div>

@@ -148,7 +148,7 @@
 	}
 </script>
 
-<a href="https://github.com/hiyorun/pdf-tools.hiyo.run" type="button" class="fixed right-1 top-1 w-10 h-10 aspect-square rounded-full bg-slate-600 p-2">
+<a href="https://github.com/hiyorun/pdf-tools.hiyo.run" type="button" class="fixed left-1 top-1 w-10 h-10 aspect-square rounded-full bg-slate-600 p-2">
 	<svg xmlns="http://www.w3.org/2000/svg" class="fill-slate-300" viewBox="0 0 92 92">
 		<defs>
 			<clipPath id="a">
@@ -168,7 +168,7 @@
 <Progress {processes} class="absolute bottom-2 left-2" />
 
 <div
-	class="w-screen h-screen bg-slate-900 text-slate-300 flex justify-center items-center overflow-hidden"
+	class="w-screen h-screen min-w-96 bg-slate-900 text-slate-300 flex justify-center items-center overflow-hidden"
 	on:dragover={handleDragOver}
 	on:dragleave={handleDragLeave}
 	on:drop={handleDrop}
@@ -207,7 +207,7 @@
 					<span class="text-sm text-slate-500 text-center">
 						Your photos won't go anywhere, everything is processed locally on your PC.
 						<br />
-						See source on top right corner on GitHub.
+						See source by clicking the button on top-left corner.
 					</span>
 				</div>
 			</label>
