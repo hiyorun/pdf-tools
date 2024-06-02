@@ -21,7 +21,7 @@
 	const dispatch = createEventDispatcher<{
 		sort: string;
 		asc: null;
-		drag: Image[];
+		update: Image[];
 		delete: number;
 		'delete:all': null;
 	}>();
@@ -36,7 +36,7 @@
 	}
 
 	function userSort(e: CustomEvent) {
-		dispatch('drag', e.detail.items);
+		dispatch('update', e.detail.items);
 	}
 
 	$: {
@@ -59,7 +59,7 @@
 			<span>Delete All</span>
 			<span class="material-symbols-outlined"> delete </span>
 		</button>
-		<Dropdown position="bottom" on:selected={sortFiles} items={filters}>
+		<Dropdown position="left" on:selected={sortFiles} items={filters}>
 			<button slot="trigger" class="bg-slate-300 text-slate-900 aspect-square rounded-full p-2">
 				<span class="material-symbols-outlined"> sort </span>
 			</button>
@@ -74,6 +74,17 @@
 		</button>
 	{:else}
 		<span>Selected {selectCount} items</span>
+		<button
+			class="bg-slate-300 text-slate-900 aspect-square rounded-full p-2"
+			on:click={() => {
+				Images.forEach((_, index) => {
+					Images[index].selected = false;
+				});
+				dispatch('update', Images);
+			}}
+		>
+			<span class="material-symbols-outlined"> cancel </span>
+		</button>
 		<button
 			class="bg-red-500 text-red-950 aspect-square rounded-full p-2"
 			on:click={() => {
@@ -93,33 +104,7 @@
 		class="flex flex-col gap-2 items-center w-full"
 	>
 		{#each Images as image, index (image.id)}
-			<button
-				type="button"
-				class="w-full h-28"
-				draggable="true"
-				bind:this={itemsElement[index]}
-				on:pointerdown={(e) => {
-					if (e.pointerType === 'mouse') {
-						console.log('on click');
-						Images[index].selected = !Images[index].selected;
-					}
-				}}
-				use:touchActions
-				on:touch:long={() => {
-					Images[index].selected = true;
-				}}
-				on:touch:move={() => {
-					moving = true;
-				}}
-				on:touch:end={() => {
-					if (!moving) {
-						if (selectCount > 0) {
-							Images[index].selected = !Images[index].selected;
-						}
-					}
-					moving = false;
-				}}
-			>
+			<button type="button" class="w-full h-28" draggable="true" bind:this={itemsElement[index]}>
 				<div
 					class="bg-slate-800 hover:bg-slate-700 flex grow justify-center items-center w-full h-28 rounded-2xl shadow pr-1 group"
 				>
@@ -134,7 +119,7 @@
 						</button>
 					{:else}
 						<button
-							class="w-5 h-5 mx-3 flex justify-center items-center rounded-full {image.selected
+							class="w-5 aspect-square mx-3 flex justify-center items-center rounded-full {image.selected
 								? 'bg-slate-300'
 								: 'bg-slate-600'}"
 						>
@@ -144,12 +129,37 @@
 							>
 						</button>
 					{/if}
-					<div
-						class="w-24 md:w-32 h-full flex justify-center items-center bg-slate-300 rounded-2xl overflow-hidden"
+					<button
+						class="flex grow justify-center items-center w-full h-28"
+						on:pointerdown={(e) => {
+							if (e.pointerType === 'mouse') {
+								console.log('on click');
+								Images[index].selected = !Images[index].selected;
+							}
+						}}
+						use:touchActions
+						on:touch:long={() => {
+							Images[index].selected = true;
+						}}
+						on:touch:move={() => {
+							moving = true;
+						}}
+						on:touch:end={() => {
+							if (!moving) {
+								if (selectCount > 0) {
+									Images[index].selected = !Images[index].selected;
+								}
+							}
+							moving = false;
+						}}
 					>
-						<img class="max-w-full max-h-full" src={image.el.src} alt={image.name} />
-					</div>
-					<div class="w-1/2 grow px-4 overflow-hidden text-left">{image.name}</div>
+						<div
+							class="w-24 md:w-32 h-full flex justify-center items-center bg-slate-300 rounded-2xl overflow-hidden"
+						>
+							<img class="max-w-full max-h-full" src={image.el.src} alt={image.name} />
+						</div>
+						<div class="w-1/2 grow px-4 overflow-hidden text-left">{image.name}</div>
+					</button>
 				</div>
 			</button>
 		{/each}

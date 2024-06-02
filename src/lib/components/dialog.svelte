@@ -55,7 +55,7 @@
 			</div>
 			<div on:click={dialogProps.cancelCallback}>
 				<slot name="cancelBtn">
-					<button class="p-2 rounded-full min-w-20 hover:bg-slate-600 bg-slate-700 text-slate-900">
+					<button class="p-2 rounded-full min-w-20 hover:bg-slate-600 bg-slate-600 text-slate-100">
 						Cancel
 					</button>
 				</slot>

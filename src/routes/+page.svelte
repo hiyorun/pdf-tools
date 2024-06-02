@@ -1,8 +1,10 @@
 <script lang="ts">
 	import Dialog from '$lib/components/dialog.svelte';
 	import Imagelist from '$lib/components/imagelist.svelte';
+	import Progress from '$lib/components/progress.svelte';
+	import genPDF from '$lib/generator';
 	import type { Image } from '$lib/types';
-	import { jsPDF } from 'jspdf';
+	import { v4 as uuidv4 } from 'uuid';
 	import type { SvelteComponent } from 'svelte';
 
 	let Images: Image[] = [];
@@ -11,6 +13,7 @@
 	let descending = false;
 	let deleteDialog: SvelteComponent;
 	let busy = false;
+	let processes: genPDF[] = [];
 
 	function handleFileChange(event: Event) {
 		busy = true;
@@ -37,7 +40,7 @@
 			Images = [
 				...Images,
 				{
-					id: i,
+					id: uuidv4(),
 					el: image,
 					name: files[i].name,
 					date: files[i].lastModified,
@@ -46,6 +49,12 @@
 			];
 		}
 		busy = false;
+	}
+
+	async function generatePDF() {
+		const newProcess = new genPDF(Images);
+		processes = [...processes, newProcess];
+		newProcess.generatePDF();
 	}
 
 	function onSort(e: CustomEvent) {
@@ -78,42 +87,6 @@
 		Images = preProcess;
 	}
 
-	async function generatePDF() {
-		if (Images.length === 0) return;
-
-		const saveImage = [...Images];
-		if (saveImage.length === 0) return;
-
-		const doc = new jsPDF({ format: 'a4' });
-		const width = doc.internal.pageSize.getWidth();
-		const height = doc.internal.pageSize.getHeight();
-
-		saveImage.forEach((image, index) => {
-			const imgWidth = image.el.naturalWidth;
-			const imgHeight = image.el.naturalHeight;
-
-			// Aspect ratio calculation to fit image without stretching
-			const scale = Math.min(width / imgWidth, height / imgHeight);
-			const scaledWidth = imgWidth * scale;
-			const scaledHeight = imgHeight * scale;
-
-			// Place image in the center of the A4 page
-			const x = (width - scaledWidth) / 2;
-			const y = (height - scaledHeight) / 2;
-
-			console.log(x, y, index);
-
-			doc.addImage(image.el, 'JPEG', x, y, scaledWidth, scaledHeight);
-			if (index < saveImage.length - 1) {
-				doc.addPage();
-			}
-		});
-
-		const filename = new Date().toISOString();
-
-		doc.save(filename);
-	}
-
 	function createImageElement(data: Uint8Array): Promise<HTMLImageElement> {
 		return new Promise((resolve, reject) => {
 			const img = new Image();
@@ -139,7 +112,7 @@
 		isDragging = false;
 	}
 
-	function onDragNDrop(event: CustomEvent) {
+	function onUpdate(event: CustomEvent) {
 		if (!event.detail) return;
 		Images = event.detail;
 	}
@@ -175,7 +148,24 @@
 	}
 </script>
 
+<a href="https://github.com/hiyorun/pdf-tools.hiyo.run" type="button" class="fixed right-1 top-1 w-10 h-10 aspect-square rounded-full bg-slate-600 p-2">
+	<svg xmlns="http://www.w3.org/2000/svg" class="fill-slate-300" viewBox="0 0 92 92">
+		<defs>
+			<clipPath id="a">
+				<path d="M0 .113h91.887V92H0Zm0 0" />
+			</clipPath>
+		</defs>
+		<g clip-path="url(#a)">
+			<path
+				d="M90.156 41.965 50.036 1.848a5.918 5.918 0 0 0-8.372 0l-8.328 8.332 10.566 10.566a7.03 7.03 0 0 1 7.23 1.684 7.034 7.034 0 0 1 1.669 7.277l10.187 10.184a7.028 7.028 0 0 1 7.278 1.672 7.04 7.04 0 0 1 0 9.957 7.05 7.05 0 0 1-9.965 0 7.044 7.044 0 0 1-1.528-7.66l-9.5-9.497V59.36a7.04 7.04 0 0 1 1.86 11.29 7.04 7.04 0 0 1-9.957 0 7.04 7.04 0 0 1 0-9.958 7.06 7.06 0 0 1 2.304-1.539V33.926a7.049 7.049 0 0 1-3.82-9.234L29.242 14.272 1.73 41.777a5.925 5.925 0 0 0 0 8.371L41.852 90.27a5.925 5.925 0 0 0 8.37 0l39.934-39.934a5.925 5.925 0 0 0 0-8.371"
+			/></g
+		></svg
+	>
+</a>
+
 <Dialog bind:this={deleteDialog} />
+
+<Progress {processes} class="absolute bottom-2 left-2" />
 
 <div
 	class="w-screen h-screen bg-slate-900 text-slate-300 flex justify-center items-center overflow-hidden"
@@ -204,7 +194,7 @@
 				on:asc={() => {
 					reverseSort();
 				}}
-				on:drag={onDragNDrop}
+				on:update={onUpdate}
 			/>
 		{:else}
 			<label for="upload-file">
