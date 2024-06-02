@@ -13,7 +13,7 @@
 	let busy = false;
 
 	function handleFileChange(event: Event) {
-		busy = true
+		busy = true;
 		const files = (event.target as HTMLInputElement)?.files;
 		if (!files) return;
 		processFiles(files);
@@ -37,6 +37,7 @@
 			Images = [
 				...Images,
 				{
+					id: i,
 					el: image,
 					name: files[i].name,
 					date: files[i].lastModified,
@@ -44,7 +45,7 @@
 				}
 			];
 		}
-		busy = false
+		busy = false;
 	}
 
 	function onSort(e: CustomEvent) {
@@ -211,7 +212,7 @@
 					class="text-center flex flex-col gap-2 items-center justify-center border rounded-2xl p-10 cursor-pointer"
 				>
 					<span class="material-symbols-outlined text-7xl"> image </span>
-					Drop your photos here, or browse.
+					Drop your photos,<br />or click here to browse your files.
 					<br />
 					<span class="text-sm text-slate-500 text-center">
 						Your photos won't go anywhere, everything is processed locally on your PC.
@@ -223,7 +224,8 @@
 		{/if}
 		<div class="absolute bottom-3 right-3 flex flex-col items-center gap-4">
 			{#if Images.length !== 0}
-				<button disabled={busy}
+				<button
+					disabled={busy}
 					class="rounded-xl p-6 w-6 h-6 flex justify-center items-center bg-slate-300 text-slate-900 hover:bg-slate-400 cursor-pointer disabled:bg-slate-500"
 					on:click={generatePDF}
 				>
