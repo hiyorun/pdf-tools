@@ -14,16 +14,19 @@
 	let deleteDialog: SvelteComponent;
 	let busy = false;
 	let processes: genPDF[] = [];
+	let resetBtn: HTMLButtonElement;
 
 	function handleFileChange(event: Event) {
 		busy = true;
 		const files = (event.target as HTMLInputElement)?.files;
+		console.log(files, 'files');
 		if (!files) return;
 		processFiles(files);
 	}
 
 	async function processFiles(files: FileList) {
 		for (let i = 0; i < files.length; i++) {
+			console.log(files[i]);
 			const reader = new FileReader();
 			reader.readAsArrayBuffer(files[i]);
 
@@ -32,7 +35,7 @@
 			});
 
 			if (e.target?.error) {
-				// Handle errors if needed
+				console.log('error');
 				continue;
 			}
 
@@ -48,6 +51,7 @@
 				}
 			];
 		}
+		resetBtn.click();
 		busy = false;
 	}
 
@@ -148,7 +152,11 @@
 	}
 </script>
 
-<a href="https://github.com/hiyorun/pdf-tools.hiyo.run" type="button" class="fixed left-1 top-1 w-10 h-10 aspect-square rounded-full bg-slate-600 p-2">
+<a
+	href="https://github.com/hiyorun/pdf-tools.hiyo.run"
+	type="button"
+	class="fixed left-1 top-1 w-10 h-10 aspect-square rounded-full bg-slate-600 p-2"
+>
 	<svg xmlns="http://www.w3.org/2000/svg" class="fill-slate-300" viewBox="0 0 92 92">
 		<defs>
 			<clipPath id="a">
@@ -175,14 +183,16 @@
 	role="none"
 >
 	<div class="flex flex-col gap-2 justify-center items-center w-full max-w-2xl max-h-full p-2">
-		<input
-			id="upload-file"
-			class="hidden"
-			type="file"
-			on:change={handleFileChange}
-			accept="image/png, image/jpeg"
-			multiple
-		/>
+		<form class="hidden">
+			<input
+				id="upload-file"
+				type="file"
+				on:change={handleFileChange}
+				accept="image/png, image/jpeg"
+				multiple
+			/>
+			<button bind:this={resetBtn} type="reset"></button>
+		</form>
 		{#if Images.length !== 0}
 			<Imagelist
 				{Images}
